@@ -1,15 +1,16 @@
 #!/bin/bash
 export WANDB_PROJECT=SuperClass
 
-deepspeed llava/train/train_mem.py \
+deepspeed --include=localhost:1,2,3,4,5,6,7,8 llava/train/train_mem.py \
     --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
     --deepspeed ./scripts/zero3.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version v1 \
     --data_path ./playground/data/llava_v1_5_mix665k.json \
     --image_folder ./playground/data \
-    --vision_tower openai/clip-vit-large-patch14-336 \
-    --pretrain_mm_mlp_adapter ./checkpoints/llava-v1.5-13b-pretrain/mm_projector.bin \
+    --vision_tower "/clifford-data/home/karlz/llava/llava/xclass/s16_128m_16384_0.004_500_0.9_0.98|None|defaultHead_our_model.pt" \
+    --image_processor openai/clip-vit-base-patch16 \
+    --pretrain_mm_mlp_adapter "/clifford-data/home/karlz/llava/checkpoints_pretrain/s16_128m_16384_0.004_500_0.9_0.98|None|defaultHead_our_model/mm_projector.bin" \
     --mm_projector_type mlp2x_gelu \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
@@ -17,7 +18,7 @@ deepspeed llava/train/train_mem.py \
     --image_aspect_ratio pad \
     --group_by_modality_length True \
     --bf16 True \
-    --output_dir ./checkpoints/llava-v1.5-13b-lora \
+    --output_dir "/clifford-data/home/karlz/llava/checkpoints_finetune/s16_128m_16384_0.004_500_0.9_0.98|None|defaultHead_our_model" \
     --num_train_epochs 1 \
     --per_device_train_batch_size 16 \
     --per_device_eval_batch_size 4 \
@@ -34,6 +35,6 @@ deepspeed llava/train/train_mem.py \
     --tf32 True \
     --model_max_length 2048 \
     --gradient_checkpointing True \
-    --dataloader_num_workers 4 \
+    --dataloader_num_workers 0 \
     --lazy_preprocess True \
     --report_to wandb

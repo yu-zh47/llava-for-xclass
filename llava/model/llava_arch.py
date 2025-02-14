@@ -17,6 +17,7 @@ from abc import ABC, abstractmethod
 
 import torch
 import torch.nn as nn
+import re
 
 from .multimodal_encoder.builder import build_vision_tower
 from .multimodal_projector.builder import build_vision_projector
@@ -47,17 +48,16 @@ class LlavaMetaModel:
         return vision_tower
 
     def initialize_vision_modules(self, model_args, fsdp=None):
-        vision_tower = model_args.vision_tower
+        vision_tower = model_args.vision_tower  # a path to checkpoint: /clifford-data/home/karlz/llava/llava/xclass/s16_128m_16384_0.004_500_0.9_0.98|None|defaultHead_epoch_1.pt
         mm_vision_select_layer = model_args.mm_vision_select_layer
         mm_vision_select_feature = model_args.mm_vision_select_feature
         pretrain_mm_mlp_adapter = model_args.pretrain_mm_mlp_adapter
         mm_patch_merge_type = model_args.mm_patch_merge_type
 
-        self.config.mm_vision_tower = vision_tower
+        self.config.mm_vision_tower = vision_tower  # path to the checkpoint of the vision tower
 
         if self.get_vision_tower() is None:
             vision_tower = build_vision_tower(model_args)
-
             if fsdp is not None and len(fsdp) > 0:
                 self.vision_tower = [vision_tower]
             else:
@@ -96,6 +96,9 @@ class LlavaMetaModel:
 
             self.mm_projector.load_state_dict(get_w(mm_projector_weights, 'mm_projector'))
 
+        # print(f"Vision tower: {vision_tower}")
+        # print(f"Vision projector: {self.mm_projector}")
+        # assert False
 
 def unpad_image(tensor, original_size):
     """

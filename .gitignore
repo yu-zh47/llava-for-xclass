@@ -33,3 +33,10 @@ ckpts*
 
 # Demo
 serve_images/
+
+# Ignore model checkpoints
+*.pt
+*.bin
+
+# Ignore things under playground
+playground/*
