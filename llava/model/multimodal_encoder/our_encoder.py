@@ -51,7 +51,7 @@ class OurVisionTower(nn.Module):
         pattern = r'(b16|s16|l16)'
         match = re.search(pattern, self.vision_tower_name)
         if match:
-            model_patchsize = match.group(0)   # extracats s16/b16/l16 from vision_tower_name
+            model_patchsize = match.group(0)   # extracats s16
         else:
             raise ValueError(f'didnot find s16 b16 l16: {self.vision_tower_name}')
 
@@ -59,28 +59,37 @@ class OurVisionTower(nn.Module):
         with open(model_config_path, 'r') as f:
             vision_cfg = json.load(f)["vision_cfg"]
 
-        checkpoint_path = self.vision_tower_name
-        vision_cfg = CLIPVisionCfg(**vision_cfg)
-        self.vision_cfg = vision_cfg
+        self.checkpoint_path = self.vision_tower_name
+        self.image_processor = args.image_processor
+        self.vision_cfg  = CLIPVisionCfg(**vision_cfg)
 
-        vision_heads = vision_cfg.width // vision_cfg.head_width
+        if not delay_load:
+            self.load_model()
+
+
+    def load_model(self, device_map=None):
+        if self.is_loaded:
+            print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
+            return
+
+        vision_heads = self.vision_cfg.width // self.vision_cfg.head_width
         self.vision_tower = VisionTransformer(
-            checkpoint_path=checkpoint_path,
-            image_size=vision_cfg.image_size,
-            patch_size=vision_cfg.patch_size,
-            width=vision_cfg.width,
-            layers=vision_cfg.layers,
+            checkpoint_path=self.checkpoint_path,
+            image_size=self.vision_cfg.image_size,
+            patch_size=self.vision_cfg.patch_size,
+            width=self.vision_cfg.width,
+            layers=self.vision_cfg.layers,
             heads=vision_heads,
-            mlp_ratio=vision_cfg.mlp_ratio,
-            ls_init_value=vision_cfg.ls_init_value,
-            patch_dropout=vision_cfg.patch_dropout,
-            attentional_pool=vision_cfg.attentional_pool,
-            attn_pooler_queries=vision_cfg.attn_pooler_queries,
-            attn_pooler_heads=vision_cfg.attn_pooler_heads,
-            pos_embed_type=vision_cfg.pos_embed_type,
-            no_ln_pre=vision_cfg.no_ln_pre,
-            final_ln_after_pool=vision_cfg.final_ln_after_pool,
-            pool_type=vision_cfg.pool_type,
+            mlp_ratio=self.vision_cfg.mlp_ratio,
+            ls_init_value=self.vision_cfg.ls_init_value,
+            patch_dropout=self.vision_cfg.patch_dropout,
+            attentional_pool=self.vision_cfg.attentional_pool,
+            attn_pooler_queries=self.vision_cfg.attn_pooler_queries,
+            attn_pooler_heads=self.vision_cfg.attn_pooler_heads,
+            pos_embed_type=self.vision_cfg.pos_embed_type,
+            no_ln_pre=self.vision_cfg.no_ln_pre,
+            final_ln_after_pool=self.vision_cfg.final_ln_after_pool,
+            pool_type=self.vision_cfg.pool_type,
             output_tokens=True, # then vision tower output is token embeddings
             act_layer=QuickGELU,
             norm_layer=nn.LayerNorm,
@@ -88,7 +97,7 @@ class OurVisionTower(nn.Module):
 
         self.vision_tower.requires_grad_(False)
         self.is_loaded = True
-        self.image_processor = CLIPImageProcessor.from_pretrained(args.image_processor)
+        self.image_processor = CLIPImageProcessor.from_pretrained(self.image_processor)
 
 
     @torch.no_grad()
